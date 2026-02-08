@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  # 本地专用：Node 容器，开启热更新
+  # 注意：不暴露端口到宿主机，统一通过 Nginx (80端口) 访问，与生产环境保持一致
+  frontend:
+    image: node:24-alpine
+    container_name: suanshu-frontend
+    volumes:
+      - ./frontend:/app
+      # 挂载 node_modules 到命名卷，避免宿主机权限问题
+      - frontend_node_modules:/app/node_modules
+    working_dir: /app
+    # 监听 0.0.0.0:5173 以便容器网络内的 Nginx 可以代理
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    networks:
+      - suanshu-net
+    restart: unless-stopped
+
+  # 覆盖 Nginx：将配置换成 dev.conf 以支持反向代理 Node
+  web:
+    volumes:
+      - ./.docker/nginx/dev.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - frontend
+
+volumes:
+  # 前端 node_modules 命名卷，提升性能并避免权限问题
+  frontend_node_modules:
