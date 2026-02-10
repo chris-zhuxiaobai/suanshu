@@ -1,0 +1,13 @@
+---
+description: 算数项目技术栈与架构约定（完整版见根目录 TECH_STACK_PROMPT.md）
+alwaysApply: true
+---
+
+# 算数 (suanshu) 技术栈速览
+
+- **后端**: Laravel 12、PHP 8.4、Composer；MariaDB + Redis；路由在 `backend/routes/web.php`，API 前缀 `/api` 由 Nginx 挂载。
+- **前端**: React 19、TypeScript、Umi Max 4、Ant Design 5 + @ant-design/pro-components、axios；API 封装 `frontend/src/services/` + `frontend/src/requestErrorConfig.ts`，baseURL `/api`，Bearer 从 `auth_token` 读取。
+- **运维**: Docker Compose；服务 `db`(MariaDB)、`redis`、`app`(PHP-FPM)、`web`(Nginx:80)；开发时叠加 `docker-compose.dev.yml` 启动前端容器（Umi dev 8000），Nginx 用 `dev.conf` 反代前端 8000、`/api` 走 Laravel。开发启动脚本 `./dev.sh`。
+- **约定**: 后端 JSON 形如 `{ code?, message?, data }`；新增 API 写 Laravel 路由，前端用 `api.get/post(...)`；环境变量根目录 `.env` + `backend/.env`（模板 `.env.tmpl`）。
+
+详细目录、版本号与文件路径见 **TECH_STACK_PROMPT.md**。

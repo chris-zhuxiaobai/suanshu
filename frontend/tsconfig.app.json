@@ -18,7 +18,8 @@
     "types": ["react", "react-dom"],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@@/*": ["./src/.umi/*"]
     },
 
     /* Linting */
@@ -27,6 +28,6 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"],
+  "include": ["src", "src/.umi", "config"],
   "exclude": ["src/**/*.example.ts", "src/**/*.example.tsx"]
 }

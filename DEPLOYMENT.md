@@ -145,7 +145,7 @@ REDIS_PASSWORD=your_strong_redis_password
 APP_ENV=production
 APP_DEBUG=false
 APP_URL=http://your-domain.com
-APP_NAME=黄桥车队算数平台
+APP_NAME=黄桥车队账目管理系统
 ```
 
 ### 2. 配置后端环境变量

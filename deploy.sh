@@ -23,6 +23,7 @@ else
 fi
 
 echo "🚀 [1/5] 启动 Docker 容器服务..."
+mkdir -p logs/laravel logs/nginx
 $DOCKER_COMPOSE_CMD up -d --build --remove-orphans
 
 # --- 2. 检查并生成 backend/.env (Laravel 框架必备) ---
@@ -41,11 +42,8 @@ docker exec suanshu-app php artisan key:generate
 
 # --- 4. 权限修复 (Linux 环境核心) ---
 echo "🔐 [4/5] 修复目录读写权限..."
-docker exec suanshu-app chmod -R 777 storage bootstrap/cache
-# if [ "$(uname)" != "Darwin" ]; then
-#     # 仅在 Linux 服务器修复宿主机挂载目录权限
-#     chmod -R 777 logs/laravel mysql_data
-# fi
+chmod -R 777 logs 2>/dev/null || true
+docker exec suanshu-app chmod -R 777 storage bootstrap/cache /var/www/html/backend/storage/logs
 
 # --- 5. 数据库迁移与缓存优化 ---
 echo "🗄️ [5/5] 执行数据库迁移与性能优化..."

@@ -50,6 +50,8 @@ if [ ! -d "frontend" ]; then
     exit 1
 fi
 
+# 前端依赖由容器内 npm install 写入 ./frontend/node_modules，宿主机与 IDE 直接可见，无需在宿主机执行 npm install
+
 # --- 2.5. 检测 docker-compose 命令（兼容新旧版本）---
 if command -v docker-compose &> /dev/null; then
     DOCKER_COMPOSE_CMD="docker-compose"
@@ -88,11 +90,17 @@ docker exec suanshu-app php artisan key:generate --force || log_warn "Key genera
 
 # --- 6. 权限修复 ---
 log_info "修复目录读写权限..."
-docker exec suanshu-app chmod -R 777 storage bootstrap/cache || log_warn "权限修复失败，请检查容器状态"
+mkdir -p logs/laravel logs/nginx
+chmod -R 777 logs 2>/dev/null || true
+docker exec suanshu-app chmod -R 777 storage bootstrap/cache /var/www/html/backend/storage/logs 2>/dev/null || log_warn "权限修复失败，请检查容器状态"
 
 # --- 7. 数据库迁移 ---
 log_info "执行数据库迁移..."
 docker exec suanshu-app php artisan migrate --force || log_warn "数据库迁移失败，请检查数据库连接"
+
+# --- 7.5. 数据种子（开发环境默认账号）---
+log_info "执行数据库种子（创建本地默认账号）..."
+docker exec suanshu-app php artisan db:seed --force || log_warn "数据库 seed 失败，可手动执行：docker exec suanshu-app php artisan db:seed --force"
 
 # --- 8. 检查前端容器状态 ---
 log_info "检查前端容器状态..."
@@ -100,7 +108,11 @@ if docker ps | grep -q suanshu-frontend; then
     log_success "前端容器运行中"
     log_info "前端开发服务器启动中，请稍候..."
     sleep 5
-    
+    # 容器内 npm install / max setup 可能以 root 写入挂载目录（node_modules、.umi），
+    # chown 为宿主机用户以便 IDE 与本机 npm 不出现 EACCES（仅 Linux/Mac）
+    if [ -n "$(id -u 2>/dev/null)" ] && [ -n "$(id -g 2>/dev/null)" ]; then
+        docker exec suanshu-frontend chown -R "$(id -u):$(id -g)" /app/node_modules /app/src/.umi 2>/dev/null || true
+    fi
     # 检查前端容器日志
     if docker logs suanshu-frontend 2>&1 | grep -q "Local:"; then
         log_success "前端开发服务器已就绪"
@@ -118,15 +130,15 @@ log_success "开发环境已就绪！"
 echo "===================================================="
 echo ""
 echo "📱 前端访问地址："
-echo "   - ${GREEN}http://localhost${NC} (统一通过 80 端口，与生产环境一致)"
+echo -e "   - ${GREEN}http://localhost${NC} (统一通过 80 端口，与生产环境一致)"
 echo ""
 echo "🔧 后端 API 地址："
-echo "   - ${GREEN}http://localhost/api${NC}"
+echo -e "   - ${GREEN}http://localhost/api${NC}"
 echo ""
 echo "📊 容器管理："
-echo "   - 查看前端日志: ${BLUE}docker logs -f suanshu-frontend${NC}"
-echo "   - 查看所有容器: ${BLUE}$DOCKER_COMPOSE_CMD -f docker-compose.yml -f docker-compose.dev.yml ps${NC}"
-echo "   - 停止环境: ${BLUE}$DOCKER_COMPOSE_CMD -f docker-compose.yml -f docker-compose.dev.yml down${NC}"
+echo -e "   - 查看前端日志: ${BLUE}docker logs -f suanshu-frontend${NC}"
+echo -e "   - 查看所有容器: ${BLUE}$DOCKER_COMPOSE_CMD -f docker-compose.yml -f docker-compose.dev.yml ps${NC}"
+echo -e "   - 停止环境: ${BLUE}$DOCKER_COMPOSE_CMD -f docker-compose.yml -f docker-compose.dev.yml down${NC}"
 echo ""
-echo "💡 提示：前端代码修改后会自动热加载，无需重启容器"
+echo "💡 提示：前端依赖由容器写入 frontend/node_modules，IDE 可直接识别；代码修改后会自动热加载"
 echo "===================================================="
