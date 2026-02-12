@@ -142,10 +142,15 @@ declare namespace API {
       turn_count: number; // 转数（整个月的转数合计）
       turn_total?: number; // 现金收入（5转合计）
       turn1_amount?: number; // 单转最高金额（取整个月的最大值）
+      turn1_date?: string | null; // 单转最高金额对应的日期
       turn2_amount?: number;
+      turn2_date?: string | null;
       turn3_amount?: number;
+      turn3_date?: string | null;
       turn4_amount?: number;
+      turn4_date?: string | null;
       turn5_amount?: number;
+      turn5_date?: string | null;
       wechat_amount?: number;
       fuel_subsidy?: number;
       reward_penalty?: number; // 整个月的奖罚合计

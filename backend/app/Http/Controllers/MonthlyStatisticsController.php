@@ -121,10 +121,15 @@ class MonthlyStatisticsController extends Controller
                     'net_income' => 0,
                     'turn_count' => 0,
                     'turn1_amount' => 0, // 单转最高金额（取整个月的最大值）
+                    'turn1_date' => null, // 单转最高金额对应的日期
                     'turn2_amount' => 0,
+                    'turn2_date' => null,
                     'turn3_amount' => 0,
+                    'turn3_date' => null,
                     'turn4_amount' => 0,
+                    'turn4_date' => null,
                     'turn5_amount' => 0,
+                    'turn5_date' => null,
                     'wechat_amount' => 0,
                     'fuel_subsidy' => 0,
                     'reward_penalty' => 0,
@@ -137,12 +142,28 @@ class MonthlyStatisticsController extends Controller
             $vehicleIncomeMap[$vehicleId]['revenue'] += $income->revenue;
             $vehicleIncomeMap[$vehicleId]['net_income'] += $income->net_income;
             $vehicleIncomeMap[$vehicleId]['turn_count'] += ($income->turn_count ?? 0);
-            // 单转最高金额：取整个月的最大值（用于单转收入最高统计）
-            $vehicleIncomeMap[$vehicleId]['turn1_amount'] = max($vehicleIncomeMap[$vehicleId]['turn1_amount'], (float) ($income->turn1_amount ?? 0));
-            $vehicleIncomeMap[$vehicleId]['turn2_amount'] = max($vehicleIncomeMap[$vehicleId]['turn2_amount'], (float) ($income->turn2_amount ?? 0));
-            $vehicleIncomeMap[$vehicleId]['turn3_amount'] = max($vehicleIncomeMap[$vehicleId]['turn3_amount'], (float) ($income->turn3_amount ?? 0));
-            $vehicleIncomeMap[$vehicleId]['turn4_amount'] = max($vehicleIncomeMap[$vehicleId]['turn4_amount'], (float) ($income->turn4_amount ?? 0));
-            $vehicleIncomeMap[$vehicleId]['turn5_amount'] = max($vehicleIncomeMap[$vehicleId]['turn5_amount'], (float) ($income->turn5_amount ?? 0));
+            // 单转最高金额：取整个月的最大值（用于单转收入最高统计），同时记录对应的日期
+            $incomeDate = $income->date instanceof \Carbon\Carbon ? $income->date->format('Y-m-d') : $income->date;
+            if ((float) ($income->turn1_amount ?? 0) > $vehicleIncomeMap[$vehicleId]['turn1_amount']) {
+                $vehicleIncomeMap[$vehicleId]['turn1_amount'] = (float) ($income->turn1_amount ?? 0);
+                $vehicleIncomeMap[$vehicleId]['turn1_date'] = $incomeDate;
+            }
+            if ((float) ($income->turn2_amount ?? 0) > $vehicleIncomeMap[$vehicleId]['turn2_amount']) {
+                $vehicleIncomeMap[$vehicleId]['turn2_amount'] = (float) ($income->turn2_amount ?? 0);
+                $vehicleIncomeMap[$vehicleId]['turn2_date'] = $incomeDate;
+            }
+            if ((float) ($income->turn3_amount ?? 0) > $vehicleIncomeMap[$vehicleId]['turn3_amount']) {
+                $vehicleIncomeMap[$vehicleId]['turn3_amount'] = (float) ($income->turn3_amount ?? 0);
+                $vehicleIncomeMap[$vehicleId]['turn3_date'] = $incomeDate;
+            }
+            if ((float) ($income->turn4_amount ?? 0) > $vehicleIncomeMap[$vehicleId]['turn4_amount']) {
+                $vehicleIncomeMap[$vehicleId]['turn4_amount'] = (float) ($income->turn4_amount ?? 0);
+                $vehicleIncomeMap[$vehicleId]['turn4_date'] = $incomeDate;
+            }
+            if ((float) ($income->turn5_amount ?? 0) > $vehicleIncomeMap[$vehicleId]['turn5_amount']) {
+                $vehicleIncomeMap[$vehicleId]['turn5_amount'] = (float) ($income->turn5_amount ?? 0);
+                $vehicleIncomeMap[$vehicleId]['turn5_date'] = $incomeDate;
+            }
             $vehicleIncomeMap[$vehicleId]['wechat_amount'] += (float) ($income->wechat_amount ?? 0);
             $vehicleIncomeMap[$vehicleId]['fuel_subsidy'] += (float) ($income->fuel_subsidy ?? 0);
             $vehicleIncomeMap[$vehicleId]['reward_penalty'] += (float) ($income->reward_penalty ?? 0);
@@ -195,10 +216,15 @@ class MonthlyStatisticsController extends Controller
                 'turn_count' => $turnCount,
                 'turn_total' => AmountHelper::truncate($turnTotal) ?? 0.0,
                 'turn1_amount' => AmountHelper::truncate($turn1) ?? 0.0,
+                'turn1_date' => $income ? ($income['turn1_date'] ?? null) : null,
                 'turn2_amount' => AmountHelper::truncate($turn2) ?? 0.0,
+                'turn2_date' => $income ? ($income['turn2_date'] ?? null) : null,
                 'turn3_amount' => AmountHelper::truncate($turn3) ?? 0.0,
+                'turn3_date' => $income ? ($income['turn3_date'] ?? null) : null,
                 'turn4_amount' => AmountHelper::truncate($turn4) ?? 0.0,
+                'turn4_date' => $income ? ($income['turn4_date'] ?? null) : null,
                 'turn5_amount' => AmountHelper::truncate($turn5) ?? 0.0,
+                'turn5_date' => $income ? ($income['turn5_date'] ?? null) : null,
                 'wechat_amount' => AmountHelper::truncate($wechatAmount) ?? 0.0,
                 'fuel_subsidy' => AmountHelper::truncate($fuelSubsidy) ?? 0.0,
                 'reward_penalty' => AmountHelper::truncate($rewardPenalty) ?? 0.0,

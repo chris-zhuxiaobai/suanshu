@@ -579,14 +579,15 @@ export default function MonthlyStatisticsPage() {
       is_overtime: boolean;
       turnNumber: number;
       turnAmount: number;
+      date: string | null;
     }> = [];
     vehiclesWithTurns.forEach((v) => {
       const turns = [
-        { num: 1, amount: v.turn1_amount || 0 },
-        { num: 2, amount: v.turn2_amount || 0 },
-        { num: 3, amount: v.turn3_amount || 0 },
-        { num: 4, amount: v.turn4_amount || 0 },
-        { num: 5, amount: v.turn5_amount || 0 },
+        { num: 1, amount: v.turn1_amount || 0, date: v.turn1_date || null },
+        { num: 2, amount: v.turn2_amount || 0, date: v.turn2_date || null },
+        { num: 3, amount: v.turn3_amount || 0, date: v.turn3_date || null },
+        { num: 4, amount: v.turn4_amount || 0, date: v.turn4_date || null },
+        { num: 5, amount: v.turn5_amount || 0, date: v.turn5_date || null },
       ];
       turns.forEach((turn) => {
         if (turn.amount > 0) {
@@ -596,6 +597,7 @@ export default function MonthlyStatisticsPage() {
             is_overtime: v.is_overtime || false,
             turnNumber: turn.num,
             turnAmount: turn.amount,
+            date: turn.date,
           });
         }
       });
@@ -1023,6 +1025,15 @@ export default function MonthlyStatisticsPage() {
                                   render: (v: string | null, record: any) => {
                                     if (record.isEllipsis) return null;
                                     return v || '-';
+                                  },
+                                },
+                                {
+                                  title: '日期',
+                                  dataIndex: 'date',
+                                  width: 110,
+                                  render: (v: string | null, record: any) => {
+                                    if (record.isEllipsis) return null;
+                                    return v ? dayjs(v).format('MM月DD日') : '-';
                                   },
                                 },
                                 {

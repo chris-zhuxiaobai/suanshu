@@ -10,8 +10,10 @@ import { clearAuthToken, requestErrorConfig } from './requestErrorConfig';
 import { logout } from './services/auth';
 import { queryCurrentUser } from './services/auth';
 import CalculatorModal from './components/CalculatorModal';
+import access from './access';
 
 const loginPath = '/user/login';
+const welcomePath = '/welcome';
 
 type InitialState = {
   currentUser?: API.CurrentUser;
@@ -94,6 +96,24 @@ function AvatarRenderWrapper({ children }: { children: ReactNode }) {
 }
 
 export const layout = ({ initialState }: { initialState?: InitialState }) => {
+  const isExportAdmin = initialState?.currentUser?.role === 'export_admin';
+
+  // 检查路径是否允许访问
+  const canAccessPath = (pathname: string): boolean => {
+    // 登录页和欢迎页始终可访问
+    if (pathname === loginPath || pathname === welcomePath) {
+      return true;
+    }
+
+    // 统计管理员只能访问欢迎页和统计模块
+    if (isExportAdmin) {
+      return pathname.startsWith('/statistics');
+    }
+
+    // 其他角色可以访问所有页面
+    return true;
+  };
+
   return {
     avatarProps: {
       title: initialState?.currentUser?.name,
@@ -103,9 +123,43 @@ export const layout = ({ initialState }: { initialState?: InitialState }) => {
     },
     onPageChange: () => {
       const { pathname } = window.location;
+      
+      // 未登录用户跳转到登录页
       if (!initialState?.currentUser && pathname !== loginPath) {
         history.push(loginPath);
+        return;
       }
+
+      // 已登录用户检查权限
+      if (initialState?.currentUser) {
+        // 非统计管理员访问欢迎页时，自动跳转到工作台
+        if (pathname === welcomePath && !isExportAdmin) {
+          history.push('/dashboard/workspace');
+          return;
+        }
+
+        // 检查访问权限
+        if (!canAccessPath(pathname)) {
+          // 统计管理员访问未授权页面时跳转到欢迎页
+          history.push(welcomePath);
+        }
+      }
+    },
+    // 菜单数据渲染，过滤掉统计管理员不能访问的菜单
+    menuDataRender: (menuData: any[]) => {
+      if (!isExportAdmin) {
+        return menuData;
+      }
+      
+      // 统计管理员只能看到统计模块
+      return menuData.filter((item) => {
+        // 保留统计模块
+        if (item.path?.startsWith('/statistics')) {
+          return true;
+        }
+        // 过滤掉其他模块
+        return false;
+      });
     },
     ...initialState?.settings,
   };

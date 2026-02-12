@@ -4,6 +4,8 @@ services:
     image: mariadb:12.0
     container_name: suanshu-db
     restart: always
+    ports:
+      - "3306:3306"
     env_file: .env # 自动加载根目录 .env 中的 DB_ROOT_PASSWORD 等变量
     volumes:
       - ./mysql_data:/var/lib/mysql

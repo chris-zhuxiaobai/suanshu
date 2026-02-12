@@ -20,17 +20,20 @@ export default [
     name: 'welcome',
     component: './Welcome',
     hideInMenu: true,
+    access: 'canAccessWelcome',
   },
   // 仪表盘（工作台为预留功能页）
   {
     path: '/dashboard',
     name: 'dashboard',
     icon: 'DashboardOutlined',
+    access: 'canAccessDashboard',
     routes: [
       {
         path: '/dashboard/workspace',
         name: 'workspace',
         component: './Dashboard/Workspace',
+        access: 'canAccessDashboard',
       },
       {
         path: '/dashboard',
@@ -43,16 +46,19 @@ export default [
     path: '/statistics',
     name: 'statistics',
     icon: 'BarChartOutlined',
+    access: 'canAccessStatistics',
     routes: [
       {
         path: '/statistics/daily',
         name: 'daily',
         component: './Statistics/Daily',
+        access: 'canAccessStatistics',
       },
       {
         path: '/statistics/monthly',
         name: 'monthly',
         component: './Statistics/Monthly',
+        access: 'canAccessStatistics',
       },
       {
         path: '/statistics',
@@ -65,11 +71,13 @@ export default [
     path: '/income',
     name: 'income',
     icon: 'DollarOutlined',
+    access: 'canAccessIncome',
     routes: [
       {
         path: '/income/entry',
         name: 'entry',
         component: './Income/Entry',
+        access: 'canAccessIncome',
       },
       {
         path: '/income',
@@ -82,21 +90,25 @@ export default [
     path: '/fleet',
     name: 'fleet',
     icon: 'CarOutlined',
+    access: 'canAccessFleet',
     routes: [
       {
         path: '/fleet/schedule',
         name: 'schedule',
         component: './Fleet/Schedule',
+        access: 'canAccessFleet',
       },
       {
         path: '/fleet/staff-config',
         name: 'staff-config',
         component: './Fleet/StaffConfig',
+        access: 'canAccessFleet',
       },
       {
         path: '/fleet/vehicles',
         name: 'vehicles',
         component: './Fleet/Vehicles',
+        access: 'canAccessFleet',
       },
       {
         path: '/fleet',

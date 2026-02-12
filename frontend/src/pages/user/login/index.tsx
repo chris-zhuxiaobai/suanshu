@@ -45,8 +45,17 @@ export default function LoginPage() {
         ...(prev || {}),
         currentUser: result.user,
       }));
+      
+      // 根据用户角色决定跳转目标
       const urlParams = new URL(window.location.href).searchParams.get('redirect');
-      history.push(urlParams || '/welcome');
+      if (urlParams) {
+        // 如果有 redirect 参数，优先使用
+        history.push(urlParams);
+      } else {
+        // 统计管理员跳转到欢迎页，其他管理员跳转到工作台
+        const isExportAdmin = result.user.role === 'export_admin';
+        history.push(isExportAdmin ? '/welcome' : '/dashboard/workspace');
+      }
     } catch (error: unknown) {
       // Laravel ValidationException：{ code: 422, message, data: { field: [msg] } }
       const err = error as ApiErrorLike;

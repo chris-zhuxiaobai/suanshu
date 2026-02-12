@@ -3,6 +3,7 @@ import { history, useModel } from '@umijs/max';
 import { Button, Card, Flex, Space, Typography } from 'antd';
 import { clearAuthToken } from '../requestErrorConfig';
 import { logout } from '../services/auth';
+import DateInfoModule from '@/components/DateInfoModule';
 
 // APP_NAME 由 Umi config.define 注入，已在常量处解析好
 declare const APP_NAME: string;
@@ -56,6 +57,9 @@ export default function WelcomePage() {
           </Space>
         )}
       </Card>
+      <div style={{ width: '100%', marginTop: 24 }}>
+        <DateInfoModule />
+      </div>
     </Flex>
   );
 }
