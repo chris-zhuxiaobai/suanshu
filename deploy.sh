@@ -11,6 +11,10 @@ if [ ! -f .env ]; then
         exit 1
     fi
 fi
+set -a
+# shellcheck source=./.env
+source .env 2>/dev/null || true
+set +a
 
 # --- 1.5. 检测 docker-compose 命令（兼容新旧版本）---
 if command -v docker-compose &> /dev/null; then
@@ -18,13 +22,29 @@ if command -v docker-compose &> /dev/null; then
 elif docker compose version &> /dev/null; then
     DOCKER_COMPOSE_CMD="docker compose"
 else
-    log_error "未找到 docker-compose 或 docker compose 命令！"
+    echo "❌ [ERROR] 未找到 docker-compose 或 docker compose 命令！"
     exit 1
 fi
 
 echo "🚀 [1/5] 启动 Docker 容器服务..."
 mkdir -p logs/laravel logs/nginx
 $DOCKER_COMPOSE_CMD up -d --build --remove-orphans
+
+echo "   -> 等待数据库就绪并开通 root 远程访问..."
+sleep 3
+until docker exec suanshu-db mariadb -uroot -p"${MYSQL_ROOT_PASSWORD:-}" -e "SELECT 1" 2>/dev/null; do
+    echo "   MariaDB 尚未就绪，2 秒后重试..."
+    sleep 2
+done
+if [ -z "${MYSQL_ROOT_PASSWORD:-}" ]; then
+    echo "   ⚠️ 未设置 MYSQL_ROOT_PASSWORD，跳过 root 远程授权（请检查 .env）"
+else
+    if docker exec suanshu-db sh -c 'P="$MYSQL_ROOT_PASSWORD"; mariadb -uroot -p"$P" -e "CREATE USER IF NOT EXISTS '\''root'\''@'\''%'\'' IDENTIFIED BY '\''$P'\''; GRANT ALL PRIVILEGES ON *.* TO '\''root'\''@'\''%'\'' WITH GRANT OPTION; FLUSH PRIVILEGES;"'; then
+        echo "   ✅ root 远程访问已开通"
+    else
+        echo "   ⚠️ root 远程授权失败，可手动在容器内执行上述 SQL"
+    fi
+fi
 
 # --- 2. 检查并生成 backend/.env (Laravel 框架必备) ---
 echo "📂 [2/5] 检查容器内 Laravel 配置..."

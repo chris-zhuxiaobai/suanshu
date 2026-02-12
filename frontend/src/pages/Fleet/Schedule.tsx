@@ -28,6 +28,7 @@ export default function SchedulePage() {
       setVehicles(result.vehicles);
       setSelectedVehicleIds([]);
     } catch (error: any) {
+      if (error?.response?.status === 403) return; // 已在全局统一提示
       messageApi.error(error?.message || '加载排班数据失败');
     } finally {
       setLoading(false);
@@ -67,6 +68,7 @@ export default function SchedulePage() {
       messageApi.success('更新成功');
       loadScheduleData(selectedDate);
     } catch (error: any) {
+      if (error?.response?.status === 403) return; // 已在全局统一提示
       const errorMessage =
         error?.response?.data?.message || error?.message || '更新失败';
       messageApi.error(errorMessage);
@@ -90,6 +92,7 @@ export default function SchedulePage() {
       setSelectedVehicleIds([]);
       loadScheduleData(selectedDate);
     } catch (error: any) {
+      if (error?.response?.status === 403) return; // 已在全局统一提示
       const errorMessage =
         error?.response?.data?.message || error?.message || '批量设置失败';
       messageApi.error(errorMessage);

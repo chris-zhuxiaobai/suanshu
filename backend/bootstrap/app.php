@@ -21,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
             // 覆盖框架默认 auth 中间件：API 未登录时不再尝试跳转到 route('login')
             'auth' => Authenticate::class,
             'can.enter.data' => \App\Http\Middleware\EnsureUserCanEnterData::class,
+            'restrict.export.admin' => \App\Http\Middleware\RestrictExportAdminToStatistics::class,
             'token.fresh' => EnsureTokenIsFresh::class,
         ]);
     })

@@ -16,6 +16,7 @@ class UserSeeder extends Seeder
     {
         $this->seedAdmin();
         $this->seedDailyAdmin();
+        $this->seedExportAdmin();
     }
 
     private function seedAdmin(): void
@@ -67,6 +68,27 @@ class UserSeeder extends Seeder
                 'email'    => $username . '@local',
                 'password' => Hash::make($password),
                 'role'     => User::ROLE_DAILY_ADMIN,
+            ]
+        );
+    }
+
+    private function seedExportAdmin(): void
+    {
+        $username = env('EXPORT_ADMIN_USERNAME', 'tongji');
+        $password = env('EXPORT_ADMIN_PASSWORD', 'tongji123');
+
+        if (app()->environment('production') && empty($password)) {
+            $this->command->warn('EXPORT_ADMIN_PASSWORD 未设置，跳过创建统计管理员账号。');
+            return;
+        }
+
+        User::updateOrCreate(
+            ['username' => $username],
+            [
+                'name'     => '统计管理员',
+                'email'    => $username . '@local',
+                'password' => Hash::make($password),
+                'role'     => User::ROLE_EXPORT_ADMIN,
             ]
         );
     }

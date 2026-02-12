@@ -14,7 +14,14 @@ export default [
       },
     ],
   },
-  // 仪表盘
+  // 欢迎页（登录后/403 等跳转）
+  {
+    path: '/welcome',
+    name: 'welcome',
+    component: './Welcome',
+    hideInMenu: true,
+  },
+  // 仪表盘（工作台为预留功能页）
   {
     path: '/dashboard',
     name: 'dashboard',
@@ -28,6 +35,28 @@ export default [
       {
         path: '/dashboard',
         redirect: '/dashboard/workspace',
+      },
+    ],
+  },
+  // 统计模块
+  {
+    path: '/statistics',
+    name: 'statistics',
+    icon: 'BarChartOutlined',
+    routes: [
+      {
+        path: '/statistics/daily',
+        name: 'daily',
+        component: './Statistics/Daily',
+      },
+      {
+        path: '/statistics/monthly',
+        name: 'monthly',
+        component: './Statistics/Monthly',
+      },
+      {
+        path: '/statistics',
+        redirect: '/statistics/daily',
       },
     ],
   },
@@ -77,11 +106,7 @@ export default [
   },
   {
     path: '/',
-    redirect: '/dashboard/workspace',
-  },
-  {
-    path: '/welcome',
-    redirect: '/dashboard/workspace',
+    redirect: '/welcome',
   },
   {
     path: '*',

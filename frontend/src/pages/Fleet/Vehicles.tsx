@@ -42,6 +42,7 @@ export default function VehiclesPage() {
           message.success('删除成功');
           actionRef.current?.reload();
         } catch (error: any) {
+          if (error?.response?.status === 403) return; // 已在全局统一提示
           message.error(error?.message || '删除失败');
         }
       },
@@ -63,6 +64,7 @@ export default function VehiclesPage() {
       setEditingVehicle(null);
       actionRef.current?.reload();
     } catch (error: any) {
+      if (error?.response?.status === 403) return; // 已在全局统一提示
       const errorMessage =
         error?.response?.data?.data?.[Object.keys(error?.response?.data?.data || {})[0]]?.[0] ||
         error?.message ||

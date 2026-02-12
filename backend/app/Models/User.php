@@ -12,8 +12,8 @@ use Laravel\Sanctum\HasApiTokens;
 /**
  * 用户模型（鉴权与多端）
  *
- * 角色：admin 常驻管理员、daily_admin 日常管理员、viewer 仅小程序。
- * Web 登录仅 admin/daily_admin；录入权限同上；viewer 仅可看统计。
+ * 角色：admin 常驻管理员、daily_admin 日常管理员、export_admin 导出管理员、viewer 仅小程序。
+ * Web 登录：admin / daily_admin / export_admin；export_admin 仅可访问统计相关接口。
  *
  * @property int $id
  * @property string|null $username Web 登录用，admin/daily_admin 必填
@@ -22,7 +22,7 @@ use Laravel\Sanctum\HasApiTokens;
  * @property \Illuminate\Support\Carbon|null $email_verified_at
  * @property string|null $password 仅 Web 登录账号必填
  * @property string|null $remember_token
- * @property string $role admin|daily_admin|viewer
+ * @property string $role admin|daily_admin|export_admin|viewer
  * @property \Illuminate\Support\Carbon $created_at
  * @property \Illuminate\Support\Carbon $updated_at
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\UserWechatBinding> $wechatBindings
@@ -32,6 +32,7 @@ class User extends Authenticatable
     public const ROLE_ADMIN = 'admin';
     public const ROLE_DAILY_ADMIN = 'daily_admin';
     public const ROLE_VIEWER = 'viewer';
+    public const ROLE_EXPORT_ADMIN = 'export_admin';
 
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
@@ -73,11 +74,11 @@ class User extends Authenticatable
     }
 
     /**
-     * 是否允许登录 Web（仅 admin / daily_admin）
+     * 是否允许登录 Web（admin / daily_admin / export_admin）
      */
     public function canLoginWeb(): bool
     {
-        return in_array($this->role, [self::ROLE_ADMIN, self::ROLE_DAILY_ADMIN], true);
+        return in_array($this->role, [self::ROLE_ADMIN, self::ROLE_DAILY_ADMIN, self::ROLE_EXPORT_ADMIN], true);
     }
 
     /**
@@ -102,6 +103,14 @@ class User extends Authenticatable
     public function isDailyAdmin(): bool
     {
         return $this->role === self::ROLE_DAILY_ADMIN;
+    }
+
+    /**
+     * 是否为导出管理员（仅可访问统计相关接口）
+     */
+    public function isExportAdmin(): bool
+    {
+        return $this->role === self::ROLE_EXPORT_ADMIN;
     }
 
     /**

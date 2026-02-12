@@ -90,6 +90,7 @@ export default function IncomeEntryPage() {
       }
       setStatisticsData(result);
     } catch (error: any) {
+      if (error?.response?.status === 403) return; // 已在全局统一提示
       messageApi.error(error?.message || '加载统计数据失败');
       setStatisticsData(null);
     } finally {
@@ -138,6 +139,7 @@ export default function IncomeEntryPage() {
       });
       setLocalIncomes(localData);
     } catch (error: any) {
+      if (error?.response?.status === 403) return; // 已在全局统一提示
       messageApi.error(error?.message || '加载收入数据失败');
     } finally {
       setLoading(false);
@@ -326,6 +328,7 @@ export default function IncomeEntryPage() {
       const schedules = await loadConductorSchedules(selectedDate);
       await loadIncomeData(selectedDate, schedules);
     } catch (error: any) {
+      if (error?.response?.status === 403) return; // 已在全局统一提示
       const errorMessage =
         error?.response?.data?.message || error?.message || '保存失败';
       messageApi.error(errorMessage);
@@ -441,7 +444,6 @@ export default function IncomeEntryPage() {
     {
       title: '营业额',
       width: 100,
-      align: 'right' as const,
       render: (_: any, record: VehicleIncomeItem) => {
         const data = localIncomes[record.vehicle_id];
         if (!data) return '';
@@ -453,7 +455,6 @@ export default function IncomeEntryPage() {
     {
       title: '实际分配金额',
       width: 120,
-      align: 'right' as const,
       render: (_: any, record: VehicleIncomeItem) => {
         const data = localIncomes[record.vehicle_id];
         if (!data) return '';
@@ -465,7 +466,6 @@ export default function IncomeEntryPage() {
     {
       title: '转数',
       width: 80,
-      align: 'center' as const,
       render: (_: any, record: VehicleIncomeItem) => {
         const data = localIncomes[record.vehicle_id];
         if (!data) return '';

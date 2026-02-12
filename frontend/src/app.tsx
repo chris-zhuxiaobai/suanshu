@@ -1,13 +1,15 @@
 import '@ant-design/v5-patch-for-react-19';
-import { LogoutOutlined } from '@ant-design/icons';
+import { LogoutOutlined, CalculatorOutlined } from '@ant-design/icons';
 import type { ReactNode } from 'react';
 import { history } from '@umijs/max';
-import { App as AntdApp, Dropdown } from 'antd';
+import { App as AntdApp, Dropdown, Button, Space } from 'antd';
 import type { MenuProps } from 'antd';
+import { useState } from 'react';
 import defaultSettings from '../config/defaultSettings';
 import { clearAuthToken, requestErrorConfig } from './requestErrorConfig';
 import { logout } from './services/auth';
 import { queryCurrentUser } from './services/auth';
+import CalculatorModal from './components/CalculatorModal';
 
 const loginPath = '/user/login';
 
@@ -66,16 +68,37 @@ const menuItems: MenuProps['items'] = [
   },
 ];
 
+// 头像区域包装组件（用于使用 hooks）
+function AvatarRenderWrapper({ children }: { children: ReactNode }) {
+  const [calculatorOpen, setCalculatorOpen] = useState(false);
+
+  return (
+    <>
+      <Space size="middle">
+        <Button
+          type="text"
+          icon={<CalculatorOutlined />}
+          onClick={() => setCalculatorOpen(true)}
+          title="计算器"
+        />
+        <Dropdown menu={{ items: menuItems }} placement="bottomRight">
+          {children}
+        </Dropdown>
+      </Space>
+      <CalculatorModal
+        open={calculatorOpen}
+        onClose={() => setCalculatorOpen(false)}
+      />
+    </>
+  );
+}
+
 export const layout = ({ initialState }: { initialState?: InitialState }) => {
   return {
     avatarProps: {
       title: initialState?.currentUser?.name,
       render: (_: unknown, avatarChildren: ReactNode) => {
-        return (
-          <Dropdown menu={{ items: menuItems }} placement="bottomRight">
-            {avatarChildren}
-          </Dropdown>
-        );
+        return <AvatarRenderWrapper>{avatarChildren}</AvatarRenderWrapper>;
       },
     },
     onPageChange: () => {

@@ -43,6 +43,11 @@ if [ ! -f .env ]; then
         exit 1
     fi
 fi
+# 加载 .env，供后续步骤使用 MYSQL_ROOT_PASSWORD 等
+set -a
+# shellcheck source=./.env
+source .env 2>/dev/null || true
+set +a
 
 # --- 2. 检查前端目录是否存在 ---
 if [ ! -d "frontend" ]; then
@@ -69,6 +74,21 @@ $DOCKER_COMPOSE_CMD -f docker-compose.yml -f docker-compose.dev.yml up -d --buil
 # 等待容器启动
 log_info "等待容器启动..."
 sleep 3
+
+# --- 3.5. 等待数据库就绪并开通 root 远程访问 ---
+log_info "等待数据库就绪并开通 root 远程访问..."
+until docker exec suanshu-db mariadb -uroot -p"${MYSQL_ROOT_PASSWORD:-}" -e "SELECT 1" 2>/dev/null; do
+    log_info "   MariaDB 尚未就绪，2 秒后重试..."
+    sleep 2
+done
+# 允许 root 从任意主机连接（供宿主机或其它容器直连）
+if [ -z "${MYSQL_ROOT_PASSWORD:-}" ]; then
+    log_warn "未设置 MYSQL_ROOT_PASSWORD，跳过 root 远程授权（请检查 .env）"
+else
+    # 在容器内执行，使用容器环境变量；单引号包裹密码以满足 SQL 字面量
+    docker exec suanshu-db sh -c 'P="$MYSQL_ROOT_PASSWORD"; mariadb -uroot -p"$P" -e "CREATE USER IF NOT EXISTS '\''root'\''@'\''%'\'' IDENTIFIED BY '\''$P'\''; GRANT ALL PRIVILEGES ON *.* TO '\''root'\''@'\''%'\'' WITH GRANT OPTION; FLUSH PRIVILEGES;"' \
+        && log_success "root 远程访问已开通" || log_warn "root 远程授权失败，可手动在容器内执行上述 SQL"
+fi
 
 # --- 4. 检查并生成 backend/.env (Laravel 框架必备) ---
 log_info "检查容器内 Laravel 配置..."

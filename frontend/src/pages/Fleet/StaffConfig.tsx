@@ -30,6 +30,7 @@ export default function StaffConfigPage() {
       const result = await listVehicles({ status: 'active', per_page: 1000 });
       setAllVehicles(result.data);
     } catch (error: any) {
+      if (error?.response?.status === 403) return; // 已在全局统一提示
       messageApi.error(error?.message || '加载车辆列表失败');
     }
   };
@@ -52,6 +53,7 @@ export default function StaffConfigPage() {
       setLocalSchedules(schedules);
       setOriginalSchedules({ ...schedules }); // 保存原始状态用于重置
     } catch (error: any) {
+      if (error?.response?.status === 403) return; // 已在全局统一提示
       messageApi.error(error?.message || '加载排班数据失败');
     } finally {
       setLoading(false);
@@ -181,6 +183,7 @@ export default function StaffConfigPage() {
       // 重新加载数据，更新原始状态
       await loadScheduleData(selectedYear, selectedMonth);
     } catch (error: any) {
+      if (error?.response?.status === 403) return; // 已在全局统一提示
       const errorMessage =
         error?.response?.data?.message || error?.message || '保存失败';
       messageApi.error(errorMessage);

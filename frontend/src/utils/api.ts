@@ -3,6 +3,8 @@
  * 基于 axios，提供统一的请求/响应处理和错误处理
  */
 
+import { message } from 'antd';
+import { history } from '@umijs/max';
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
 
 const API_BASE_URL = '/api';
@@ -108,14 +110,12 @@ apiClient.interceptors.response.use(
         // window.location.href = '/login';
       }
 
-      // 403 禁止访问
+      // 403 禁止访问 - 统一提示并跳转欢迎页
       if (status === 403) {
-        throw new ApiError(
-          '没有权限访问该资源',
-          status,
-          'FORBIDDEN',
-          data
-        );
+        const msg = (data as { message?: string })?.message || '没有访问权限';
+        message.error(msg);
+        history.push('/welcome');
+        throw new ApiError(msg, status, 'FORBIDDEN', data);
       }
 
       // 404 未找到
