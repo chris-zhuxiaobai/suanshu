@@ -12,6 +12,25 @@ import { queryCurrentUser } from './services/auth';
 import CalculatorModal from './components/CalculatorModal';
 import access from './access';
 
+// 抑制 React 19 关于 jsx 属性的警告（来自第三方库，如 @ant-design/pro-components）
+// 这个警告不影响功能，但会在控制台产生噪音
+if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
+  const originalError = console.error;
+  console.error = (...args: any[]) => {
+    // 过滤掉关于 jsx 属性的警告
+    const message = args[0];
+    if (
+      typeof message === 'string' &&
+      (message.includes('Received `true` for a non-boolean attribute `jsx`') ||
+        message.includes('jsx="true"') ||
+        message.includes('jsx attribute'))
+    ) {
+      return;
+    }
+    originalError.apply(console, args);
+  };
+}
+
 const loginPath = '/user/login';
 const welcomePath = '/welcome';
 

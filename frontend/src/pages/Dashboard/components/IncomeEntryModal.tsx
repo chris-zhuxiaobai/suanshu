@@ -317,7 +317,7 @@ export default function IncomeEntryModal({
           保存
         </Button>,
       ]}
-      destroyOnClose
+      destroyOnHidden
     >
       <Form form={form} layout="vertical" style={{ marginTop: 16 }} onValuesChange={handleFormValuesChange}>
         <Row gutter={16}>
@@ -383,12 +383,13 @@ export default function IncomeEntryModal({
           </Col>
         </Row>
 
-        <Row gutter={16}>
-          <Col span={8}>
+        <Row gutter={12} style={{ display: 'flex', flexWrap: 'wrap' }}>
+          <Col flex="none">
             <Form.Item
               label="微信收入"
               name="wechat_amount"
               getValueFromEvent={(value) => value ?? 0}
+              style={{ marginBottom: 0 }}
             >
               <Space.Compact>
                 <InputNumber
@@ -401,13 +402,14 @@ export default function IncomeEntryModal({
                 />
                 <span
                   style={{
-                    padding: '0 8px',
-                    display: 'flex',
+                    padding: '0 11px',
+                    display: 'inline-flex',
                     alignItems: 'center',
                     backgroundColor: '#fafafa',
                     border: '1px solid #d9d9d9',
                     borderLeft: 'none',
                     borderRadius: '0 6px 6px 0',
+                    height: '32px',
                   }}
                 >
                   元
@@ -415,11 +417,12 @@ export default function IncomeEntryModal({
               </Space.Compact>
             </Form.Item>
           </Col>
-          <Col span={8}>
+          <Col flex="none">
             <Form.Item
               label="补油款"
               name="fuel_subsidy"
               getValueFromEvent={(value) => value ?? 0}
+              style={{ marginBottom: 0 }}
             >
               <Space.Compact>
                 <InputNumber
@@ -432,13 +435,14 @@ export default function IncomeEntryModal({
                 />
                 <span
                   style={{
-                    padding: '0 8px',
-                    display: 'flex',
+                    padding: '0 11px',
+                    display: 'inline-flex',
                     alignItems: 'center',
                     backgroundColor: '#fafafa',
                     border: '1px solid #d9d9d9',
                     borderLeft: 'none',
                     borderRadius: '0 6px 6px 0',
+                    height: '32px',
                   }}
                 >
                   元
@@ -446,11 +450,12 @@ export default function IncomeEntryModal({
               </Space.Compact>
             </Form.Item>
           </Col>
-          <Col span={8}>
+          <Col xs={24} sm={24} flex="none" style={{ width: '100%' }}>
             <Form.Item
               label="奖罚"
               name="reward_penalty"
               getValueFromEvent={(value) => value ?? 0}
+              style={{ marginBottom: 0 }}
             >
               <Space.Compact>
                 <InputNumber
@@ -462,13 +467,14 @@ export default function IncomeEntryModal({
                 />
                 <span
                   style={{
-                    padding: '0 8px',
-                    display: 'flex',
+                    padding: '0 11px',
+                    display: 'inline-flex',
                     alignItems: 'center',
                     backgroundColor: '#fafafa',
                     border: '1px solid #d9d9d9',
                     borderLeft: 'none',
                     borderRadius: '0 6px 6px 0',
+                    height: '32px',
                   }}
                 >
                   元

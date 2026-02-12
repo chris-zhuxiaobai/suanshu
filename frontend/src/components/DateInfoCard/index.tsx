@@ -2,6 +2,7 @@ import { Typography, Tag, Space } from 'antd';
 import dayjs from 'dayjs';
 import { Solar, Lunar, HolidayUtil } from 'lunar-javascript';
 import { useEffect, useState } from 'react';
+import { useIsMobile } from '@/utils/useDevice';
 
 interface DateInfoProps {
   date: dayjs.Dayjs;
@@ -9,6 +10,8 @@ interface DateInfoProps {
 }
 
 export default function DateInfoCard({ date, title }: DateInfoProps) {
+  const isMobile = useIsMobile();
+  
   // 获取星期几
   const getWeekday = (date: dayjs.Dayjs): string => {
     const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
@@ -146,16 +149,36 @@ export default function DateInfoCard({ date, title }: DateInfoProps) {
 
   return (
     <div style={{ height: '100%' }}>
-      <Typography.Title level={5} style={{ marginBottom: 16 }}>
+      <Typography.Title 
+        level={5} 
+        style={{ 
+          marginBottom: isMobile ? 12 : 16,
+          fontSize: isMobile ? '14px' : undefined,
+        }}
+      >
         {title}
       </Typography.Title>
-      <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+      <Space direction="vertical" size={isMobile ? 'small' : 'middle'} style={{ width: '100%' }}>
         {/* 日期和星期 */}
         <div>
-          <Typography.Title level={4} style={{ margin: 0 }}>
+          <Typography.Title 
+            level={4} 
+            style={{ 
+              margin: 0,
+              fontSize: isMobile ? '18px' : undefined,
+              lineHeight: isMobile ? '24px' : undefined,
+            }}
+          >
             {date.format('YYYY年MM月DD日')}
           </Typography.Title>
-          <Typography.Text type="secondary" style={{ fontSize: '14px' }}>
+          <Typography.Text 
+            type="secondary" 
+            style={{ 
+              fontSize: isMobile ? '12px' : '14px',
+              display: 'block',
+              marginTop: isMobile ? 4 : 0,
+            }}
+          >
             {weekday}
           </Typography.Text>
         </div>
@@ -163,8 +186,15 @@ export default function DateInfoCard({ date, title }: DateInfoProps) {
         {/* 农历日期 */}
         {lunarDate && (
           <div>
-            <Typography.Text type="secondary">农历：</Typography.Text>
-            <Typography.Text>{lunarDate}</Typography.Text>
+            <Typography.Text 
+              type="secondary" 
+              style={{ fontSize: isMobile ? '12px' : undefined }}
+            >
+              农历：
+            </Typography.Text>
+            <Typography.Text style={{ fontSize: isMobile ? '12px' : undefined }}>
+              {lunarDate}
+            </Typography.Text>
           </div>
         )}
 
@@ -193,12 +223,27 @@ export default function DateInfoCard({ date, title }: DateInfoProps) {
           if (uniqueFestivals.length > 0) {
             return (
               <div>
-                <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 4 }}>
+                <Typography.Text 
+                  type="secondary" 
+                  style={{ 
+                    display: 'block', 
+                    marginBottom: 4,
+                    fontSize: isMobile ? '12px' : undefined,
+                  }}
+                >
                   节日：
                 </Typography.Text>
                 <Space wrap size={[4, 4]}>
                   {uniqueFestivals.map((festival, index) => (
-                    <Tag key={index} color="orange">
+                    <Tag 
+                      key={index} 
+                      color="orange"
+                      style={{ 
+                        fontSize: isMobile ? '11px' : undefined,
+                        padding: isMobile ? '0 6px' : undefined,
+                        lineHeight: isMobile ? '20px' : undefined,
+                      }}
+                    >
                       {festival}
                     </Tag>
                   ))}
@@ -211,31 +256,87 @@ export default function DateInfoCard({ date, title }: DateInfoProps) {
 
         {/* 日期类型：工作日/节假日/周末 */}
         <div>
-          <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 4 }}>
+          <Typography.Text 
+            type="secondary" 
+            style={{ 
+              display: 'block', 
+              marginBottom: 4,
+              fontSize: isMobile ? '12px' : undefined,
+            }}
+          >
             日期类型：
           </Typography.Text>
           {(() => {
             // 优先判断法定节假日：只有当holidayInfo.isHoliday为true时才是法定节假日
             // holidayData为空时，isHoliday肯定为false，不会显示为节假日
             if (holidayInfo && holidayInfo.isHoliday && !holidayInfo.isWorkday) {
-              return <Tag color="red">节假日</Tag>;
+              return (
+                <Tag 
+                  color="red"
+                  style={{ 
+                    fontSize: isMobile ? '11px' : undefined,
+                    padding: isMobile ? '0 6px' : undefined,
+                    lineHeight: isMobile ? '20px' : undefined,
+                  }}
+                >
+                  节假日
+                </Tag>
+              );
             }
             // 其次判断周末：如果是周末且不是调休上班，显示"周末"
             if (workdayStatus.isWeekend && holidayInfo?.isWorkday !== true) {
-              return <Tag color="orange">周末</Tag>;
+              return (
+                <Tag 
+                  color="orange"
+                  style={{ 
+                    fontSize: isMobile ? '11px' : undefined,
+                    padding: isMobile ? '0 6px' : undefined,
+                    lineHeight: isMobile ? '20px' : undefined,
+                  }}
+                >
+                  周末
+                </Tag>
+              );
             }
             // 否则显示"工作日"
-            return <Tag color="default">工作日</Tag>;
+            return (
+              <Tag 
+                color="default"
+                style={{ 
+                  fontSize: isMobile ? '11px' : undefined,
+                  padding: isMobile ? '0 6px' : undefined,
+                  lineHeight: isMobile ? '20px' : undefined,
+                }}
+              >
+                工作日
+              </Tag>
+            );
           })()}
         </div>
 
         {/* 是否调休：仅在需要调休时显示 */}
         {holidayInfo && holidayInfo.isWorkday && (workdayStatus.isWeekend || holidayInfo.isHoliday) && (
           <div>
-            <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 4 }}>
+            <Typography.Text 
+              type="secondary" 
+              style={{ 
+                display: 'block', 
+                marginBottom: 4,
+                fontSize: isMobile ? '12px' : undefined,
+              }}
+            >
               调休：
             </Typography.Text>
-            <Tag color="blue">是（需上班）</Tag>
+            <Tag 
+              color="blue"
+              style={{ 
+                fontSize: isMobile ? '11px' : undefined,
+                padding: isMobile ? '0 6px' : undefined,
+                lineHeight: isMobile ? '20px' : undefined,
+              }}
+            >
+              是（需上班）
+            </Tag>
           </div>
         )}
       </Space>
