@@ -55,4 +55,8 @@ export default defineConfig({
   request: {},
   access: {},
   presets: ['umi-presets-pro'],
+  // exceljs 不放入 MF 容器，避免动态/静态引用时报 "does not exist in container" 或 Workbook 非构造函数
+  mfsu: {
+    exclude: ['exceljs'],
+  },
 });
