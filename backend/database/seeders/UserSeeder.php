@@ -57,13 +57,13 @@ class UserSeeder extends Seeder
 
         if (empty($password) && app()->environment('local')) {
             $password = 'Manager123!';
-            $this->command->warn('本地环境使用默认日常管理员密码: Manager123!，请勿用于生产。');
+            $this->command->warn('本地环境使用默认日常管理员密码: {$password}，请勿用于生产。');
         }
 
         User::updateOrCreate(
             ['username' => $username],
             [
-                'name'     => '日常管理员',
+                'name'     => '彭玉华',
                 'email'    => $username . '@local',
                 'password' => Hash::make($password),
                 'role'     => User::ROLE_DAILY_ADMIN,

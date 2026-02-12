@@ -1,5 +1,21 @@
 export default {
-    'menu.welcome': '概览',
     'menu.login': '登录',
-    // 按需补充更多 menu.xxx 或 page.xxx
+    'menu.dashboard': '仪表盘',
+    'menu.dashboard.workspace': '工作台',
+    'menu.income': '收入录入',
+    'menu.income.entry': '收入录入',
+    'menu.fleet': '车队管理',
+    'menu.fleet.schedule': '车辆排班设置',
+    'menu.fleet.staff-config': '服务员跟车配置',
+    'menu.fleet.vehicles': '车辆管理',
+    'menu.stats': '统计',
+    'menu.stats.report': '统计页面',
+    'menu.stats.report.daily': '日报表',
+    'menu.stats.report.monthly': '月报表',
+    'menu.stats.report.export': '数据导出',
+    'menu.stats.report.export.daily': '日报表导出',
+    'menu.stats.report.export.monthly': '月报表导出',
+    'menu.stats.report.export.export': '数据导出',
+    'menu.stats.report.export.export.daily': '日报表导出',
+    'menu.stats.report.export.export.monthly': '月报表导出',
   };

@@ -3,8 +3,8 @@ import { history, useModel } from '@umijs/max';
 import { App, Button, Card, Form, Input, Typography } from 'antd';
 import { login } from '@/services/auth';
 
-// APP_NAME 由 Umi config.define 注入，为全局常量
-declare const APP_NAME: string | undefined;
+// APP_NAME 由 Umi config.define 注入，已在常量处解析好
+declare const APP_NAME: string;
 
 type InitialStateShape = {
   currentUser?: API.CurrentUser;
@@ -32,8 +32,7 @@ export default function LoginPage() {
         | ((prev: InitialStateShape | undefined) => InitialStateShape),
     ) => Promise<void> | void;
   };
-  const appTitle =
-    initialState?.settings?.title || APP_NAME || '算数平台';
+  const appTitle = initialState?.settings?.title || APP_NAME;
 
   const handleSubmit = async (values: LoginFormValues) => {
     try {

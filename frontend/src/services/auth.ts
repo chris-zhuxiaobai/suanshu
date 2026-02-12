@@ -1,5 +1,5 @@
 import { request } from '@umijs/max';
-import { setAuthToken } from '../requestErrorConfig';
+import { clearAuthToken, setAuthToken } from '../requestErrorConfig';
 
 /** 当前用户信息 */
 export async function queryCurrentUser(): Promise<API.CurrentUser | null> {
@@ -21,7 +21,11 @@ export async function login(
   return data!;
 }
 
-/** 登出并撤销服务端 token */
+/** 登出并撤销服务端 token，清除本地 token */
 export async function logout(): Promise<void> {
-  await request('/auth/logout', { method: 'POST' });
+  try {
+    await request('/auth/logout', { method: 'POST' });
+  } finally {
+    clearAuthToken();
+  }
 }

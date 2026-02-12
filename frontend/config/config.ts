@@ -1,12 +1,12 @@
 // https://umijs.org/config/
 import path from 'node:path';
 import { defineConfig } from '@umijs/max';
+import { APP_NAME } from './constants';
 import defaultSettings from './defaultSettings';
 import proxy from './proxy';
 import routes from './routes';
 
-const { UMI_ENV = 'dev', APP_NAME } = process.env;
-const appName = APP_NAME || '算数平台';
+const { UMI_ENV = 'dev' } = process.env;
 
 export default defineConfig({
   hash: true,
@@ -25,9 +25,9 @@ export default defineConfig({
   model: {},
   initialState: {},
   // 页面默认标题统一从 APP_NAME 读取（并通过 define 注入到客户端）
-  title: appName,
+  title: APP_NAME,
   define: {
-    APP_NAME: appName,
+    APP_NAME,
   },
   layout: {
     locale: true,
