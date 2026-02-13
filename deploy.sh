@@ -32,14 +32,36 @@ $DOCKER_COMPOSE_CMD up -d --build --remove-orphans
 
 echo "   -> 等待数据库就绪并开通 root 远程访问..."
 sleep 3
-until docker exec suanshu-db mariadb -uroot -p"${MYSQL_ROOT_PASSWORD:-}" -e "SELECT 1" 2>/dev/null; do
-    echo "   MariaDB 尚未就绪，2 秒后重试..."
+# 使用 MYSQL_PWD 传参避免密码中的特殊字符破坏 shell；最多重试 30 次（约 60 秒）
+MAX_DB_WAIT=30
+n=0
+until [ "$n" -ge "$MAX_DB_WAIT" ]; do
+    if docker exec -e MYSQL_PWD="${MYSQL_ROOT_PASSWORD:-}" suanshu-db mariadb -uroot -e "SELECT 1" 2>/dev/null; then
+        break
+    fi
+    n=$((n + 1))
+    echo "   MariaDB 尚未就绪，2 秒后重试... ($n/$MAX_DB_WAIT)"
     sleep 2
 done
+if [ "$n" -ge "$MAX_DB_WAIT" ]; then
+    echo "   ❌ 数据库在 ${MAX_DB_WAIT} 次重试后仍未就绪。"
+    if docker logs suanshu-db 2>&1 | tail -30 | grep -qi "Access denied"; then
+        echo ""
+        echo "   📌 日志中有「Access denied」，说明当前 .env 的 MYSQL_ROOT_PASSWORD 与数据库里已保存的 root 密码不一致。"
+        echo "   解决方式二选一："
+        echo "     A) 把 .env 里的 MYSQL_ROOT_PASSWORD 改回当初首次建库时用的密码；"
+        echo "     B) 清空数据重建（会丢失库内所有数据）："
+        echo "        docker compose down && rm -rf mysql_data && ./deploy.sh"
+    else
+        echo "   请检查：docker ps | grep suanshu-db ； docker logs suanshu-db"
+    fi
+    exit 1
+fi
 if [ -z "${MYSQL_ROOT_PASSWORD:-}" ]; then
     echo "   ⚠️ 未设置 MYSQL_ROOT_PASSWORD，跳过 root 远程授权（请检查 .env）"
 else
-    if docker exec suanshu-db sh -c 'P="$MYSQL_ROOT_PASSWORD"; mariadb -uroot -p"$P" -e "CREATE USER IF NOT EXISTS '\''root'\''@'\''%'\'' IDENTIFIED BY '\''$P'\''; GRANT ALL PRIVILEGES ON *.* TO '\''root'\''@'\''%'\'' WITH GRANT OPTION; FLUSH PRIVILEGES;"'; then
+    # 在容器内执行，密码通过环境变量传入；单引号转义后拼入 SQL
+    if docker exec -e MYSQL_ROOT_PASSWORD="${MYSQL_ROOT_PASSWORD}" suanshu-db sh -c 'P="$MYSQL_ROOT_PASSWORD"; Pesc=$(printf "%s" "$P" | sed "s/\x27/\\\\\x27/g"); mariadb -uroot -p"$P" -e "CREATE USER IF NOT EXISTS \"root\"@\"%\" IDENTIFIED BY '\''$Pesc'\''; GRANT ALL PRIVILEGES ON *.* TO \"root\"@\"%\" WITH GRANT OPTION; FLUSH PRIVILEGES;"' 2>/dev/null; then
         echo "   ✅ root 远程访问已开通"
     else
         echo "   ⚠️ root 远程授权失败，可手动在容器内执行上述 SQL"
