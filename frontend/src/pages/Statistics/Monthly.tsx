@@ -1467,7 +1467,7 @@ export default function MonthlyStatisticsPage() {
                               size="small"
                               extra={
                                 <Space>
-                                  {!paymentBalanceData.is_saved && !isExportAdmin && (
+                                  {!paymentBalanceData.is_saved && (
                                     <span style={{ color: '#ff4d4f', fontSize: '12px' }}>
                                       等待管理员确认数据后才可导出
                                     </span>

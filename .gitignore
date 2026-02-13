@@ -4,3 +4,8 @@
 logs/
 mysql_data/
 redis_data/
+
+# Umi 构建/缓存产物（无需纳入版本管理）
+frontend/src/.umi/
+frontend/src/.umi-production/
+frontend/dist/
