@@ -4,6 +4,7 @@ import { App, Button, Card, DatePicker, Form, Input, InputNumber, Row, Col, Sele
 import { SaveOutlined, SearchOutlined } from '@ant-design/icons';
 import dayjs, { type Dayjs } from 'dayjs';
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from '@umijs/max';
 import { createDailyIncome, getIncomesByDate, updateDailyIncome } from '@/services/dailyIncomes';
 import { getSchedulesByMonth } from '@/services/conductorSchedules';
 import { getStatisticsByDate } from '@/services/dailyStatistics';
@@ -30,8 +31,22 @@ interface LocalIncomeData {
 
 export default function IncomeEntryPage() {
   const { message: messageApi } = App.useApp();
+  const [searchParams] = useSearchParams();
   const [selectedDate, setSelectedDate] = useState<Dayjs>(dayjs());
   const [activeTab, setActiveTab] = useState<string>('entry');
+
+  // 支持 URL ?date=YYYY-MM-DD 初始日期（如从工作台历史待办跳转）
+  // 从历史待办跳转时，自动筛选"未录入"车辆
+  useEffect(() => {
+    const dateParam = searchParams.get('date');
+    if (!dateParam) return;
+    const d = dayjs(dateParam, 'YYYY-MM-DD', true);
+    if (d.isValid() && !d.isAfter(dayjs(), 'day')) {
+      setSelectedDate(d);
+      // 从历史待办跳转时，自动选择"未录入"筛选
+      setIncomeStatusFilter('not_entered');
+    }
+  }, [searchParams]);
   const [loading, setLoading] = useState(false);
   const [vehicles, setVehicles] = useState<VehicleIncomeItem[]>([]);
   const [conductorSchedules, setConductorSchedules] = useState<Record<string, string>>({});

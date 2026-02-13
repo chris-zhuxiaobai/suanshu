@@ -2,6 +2,7 @@ import { PageContainer } from '@ant-design/pro-components';
 import { App, Card, Space, Tag, Typography, Divider, Row, Col, Statistic } from 'antd';
 import dayjs from 'dayjs';
 import { useEffect, useState, useMemo } from 'react';
+import { history } from '@umijs/max';
 import { getIncomesByDate } from '@/services/dailyIncomes';
 import { getStatisticsByDate } from '@/services/dailyStatistics';
 import IncomeEntryModal from './components/IncomeEntryModal';
@@ -22,6 +23,8 @@ export default function WorkspacePage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [statisticsLoading, setStatisticsLoading] = useState(false);
   const [statisticsData, setStatisticsData] = useState<API.DailyStatisticsData | null>(null);
+  const [historyPendingDates, setHistoryPendingDates] = useState<string[]>([]);
+  const [historyPendingLoading, setHistoryPendingLoading] = useState(false);
   const today = dayjs().format('YYYY-MM-DD');
 
   // 金额格式化：整数不显示小数，小数保留1位
@@ -69,9 +72,49 @@ export default function WorkspacePage() {
     }
   };
 
+  // 加载当月今日以前存在未录入信息的日期（历史待办）
+  const loadHistoryPendingDates = async () => {
+    setHistoryPendingLoading(true);
+    try {
+      const start = dayjs().startOf('month');
+      const end = dayjs().subtract(1, 'day');
+      if (end.isBefore(start)) {
+        setHistoryPendingDates([]);
+        return;
+      }
+      const datesToCheck: string[] = [];
+      let d = start;
+      while (!d.isAfter(end)) {
+        datesToCheck.push(d.format('YYYY-MM-DD'));
+        d = d.add(1, 'day');
+      }
+      const results = await Promise.all(
+        datesToCheck.map((date) =>
+          getIncomesByDate(date).catch(() => ({ vehicles: [] }))
+        )
+      );
+      const pending: string[] = [];
+      results.forEach((res, i) => {
+        const hasPending = res.vehicles?.some(
+          (v) => !v.is_rest && !v.has_income
+        );
+        if (hasPending) pending.push(datesToCheck[i]);
+      });
+      // 日期倒序（最近的在前）
+      pending.sort((a, b) => (a > b ? -1 : 1));
+      setHistoryPendingDates(pending);
+    } catch (e) {
+      if ((e as any)?.response?.status === 403) return;
+      setHistoryPendingDates([]);
+    } finally {
+      setHistoryPendingLoading(false);
+    }
+  };
+
   useEffect(() => {
     loadTodayVehicles();
     loadStatisticsData();
+    loadHistoryPendingDates();
   }, []);
 
   // 按状态分类车辆
@@ -113,32 +156,106 @@ export default function WorkspacePage() {
   const handleModalSuccess = () => {
     loadTodayVehicles();
     loadStatisticsData();
+    loadHistoryPendingDates();
+  };
+
+  const goToIncomeEntry = (date: string) => {
+    history.push(`/income/entry?date=${date}`);
   };
 
   return (
     <PageContainer>
-      {/* 日期信息模块 */}
-      <div style={{ marginBottom: 16 }}>
-        <DateInfoModule />
-      </div>
+      {/* 第一排：日期信息模块 + 当日统计 */}
+      <Row gutter={16} style={{ marginBottom: 16 }}>
+        <Col xs={24} lg={14}>
+          <DateInfoModule />
+        </Col>
+        <Col xs={24} lg={10}>
+          <Card title="当日统计" loading={statisticsLoading}>
+            {statisticsData?.statistics ? (
+              <Space direction="vertical" size="large" style={{ width: '100%' }}>
+                <Row gutter={16}>
+                  <Col span={12}>
+                    <Statistic
+                      title="总营业额"
+                      value={statisticsData.statistics.total_revenue}
+                      precision={1}
+                      suffix="元"
+                      valueStyle={{ color: '#1677ff' }}
+                    />
+                  </Col>
+                  <Col span={12}>
+                    <Statistic
+                      title="总净收入"
+                      value={statisticsData.statistics.total_net_income}
+                      precision={1}
+                      suffix="元"
+                      valueStyle={{ color: '#52c41a' }}
+                    />
+                  </Col>
+                </Row>
+                <Row gutter={16}>
+                  <Col span={12}>
+                    <Statistic
+                      title="平均营业额"
+                      value={statisticsData.statistics.average_revenue}
+                      precision={1}
+                      suffix="元"
+                    />
+                  </Col>
+                  <Col span={12}>
+                    <Statistic
+                      title="平均净收入"
+                      value={statisticsData.statistics.average_net_income}
+                      precision={1}
+                      suffix="元"
+                    />
+                  </Col>
+                </Row>
+                <Divider style={{ margin: '16px 0' }} />
+                <Row gutter={16}>
+                  <Col span={12}>
+                    <Statistic
+                      title="已录入车辆"
+                      value={statisticsData.statistics.vehicle_count}
+                      suffix={`/ ${statisticsData.statistics.total_vehicle_count}`}
+                      valueStyle={{ color: '#722ed1' }}
+                    />
+                  </Col>
+                  <Col span={12}>
+                    <Statistic
+                      title="休息车辆"
+                      value={statisticsData.statistics.rest_vehicle_count || 0}
+                      valueStyle={{ color: '#fa8c16' }}
+                    />
+                  </Col>
+                </Row>
+              </Space>
+            ) : (
+              <Typography.Text type="secondary">暂无统计数据</Typography.Text>
+            )}
+          </Card>
+        </Col>
+      </Row>
 
+      {/* 第二排：左侧今日待办+已录入+休息，右侧历史待办 */}
       <Row gutter={16}>
-        {/* 左侧：车辆信息 */}
+        {/* 左侧：今日待办、已录入、休息 */}
         <Col xs={24} lg={14}>
           <Card>
             <Space direction="vertical" size="large" style={{ width: '100%' }}>
 
-              {/* 待录入车辆 */}
+              {/* 今日待办（原待录入） */}
               <div>
                 <Typography.Title level={5} style={{ marginBottom: 16 }}>
-                  待录入
+                  今日待办
                   <Tag color="default" style={{ marginLeft: 8 }}>
                     {categorizedVehicles.pending.length}
                   </Tag>
                 </Typography.Title>
                 <Space wrap size={[8, 8]}>
                   {categorizedVehicles.pending.length === 0 ? (
-                    <Typography.Text type="secondary">暂无待录入车辆</Typography.Text>
+                    <Typography.Text type="secondary">暂无待办车辆</Typography.Text>
                   ) : (
                     categorizedVehicles.pending.map((vehicle) => (
                       <Tag
@@ -226,70 +343,32 @@ export default function WorkspacePage() {
           </Card>
         </Col>
 
-        {/* 右侧：统计数据 */}
+        {/* 右侧：历史待办 */}
         <Col xs={24} lg={10}>
-          <Card title="当日统计" loading={statisticsLoading}>
-            {statisticsData?.statistics ? (
-              <Space direction="vertical" size="large" style={{ width: '100%' }}>
-                <Row gutter={16}>
-                  <Col span={12}>
-                    <Statistic
-                      title="总营业额"
-                      value={statisticsData.statistics.total_revenue}
-                      precision={1}
-                      suffix="元"
-                      valueStyle={{ color: '#1677ff' }}
-                    />
-                  </Col>
-                  <Col span={12}>
-                    <Statistic
-                      title="总净收入"
-                      value={statisticsData.statistics.total_net_income}
-                      precision={1}
-                      suffix="元"
-                      valueStyle={{ color: '#52c41a' }}
-                    />
-                  </Col>
-                </Row>
-                <Row gutter={16}>
-                  <Col span={12}>
-                    <Statistic
-                      title="平均营业额"
-                      value={statisticsData.statistics.average_revenue}
-                      precision={1}
-                      suffix="元"
-                    />
-                  </Col>
-                  <Col span={12}>
-                    <Statistic
-                      title="平均净收入"
-                      value={statisticsData.statistics.average_net_income}
-                      precision={1}
-                      suffix="元"
-                    />
-                  </Col>
-                </Row>
-                <Divider style={{ margin: '16px 0' }} />
-                <Row gutter={16}>
-                  <Col span={12}>
-                    <Statistic
-                      title="已录入车辆"
-                      value={statisticsData.statistics.vehicle_count}
-                      suffix={`/ ${statisticsData.statistics.total_vehicle_count}`}
-                      valueStyle={{ color: '#722ed1' }}
-                    />
-                  </Col>
-                  <Col span={12}>
-                    <Statistic
-                      title="休息车辆"
-                      value={statisticsData.statistics.rest_vehicle_count || 0}
-                      valueStyle={{ color: '#fa8c16' }}
-                    />
-                  </Col>
-                </Row>
-              </Space>
+          <Card title="历史待办" loading={historyPendingLoading}>
+            <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>
+              当月今日以前存在未录入信息的日期
+            </Typography.Text>
+            {historyPendingDates.length === 0 ? (
+              <Typography.Text type="secondary">暂无</Typography.Text>
             ) : (
-              <Typography.Text type="secondary">暂无统计数据</Typography.Text>
+              <Space wrap size={[8, 8]}>
+                {historyPendingDates.map((dateStr) => (
+                  <Tag
+                    key={dateStr}
+                    color="blue"
+                    style={{
+                      cursor: 'pointer',
+                      padding: '4px 12px',
+                      fontSize: '14px',
+                      borderRadius: '4px',
+                    }}
+                    onClick={() => goToIncomeEntry(dateStr)}
+                  >
+                    {dayjs(dateStr).format('M月D日')}
+                  </Tag>
+                ))}
+              </Space>
             )}
           </Card>
         </Col>

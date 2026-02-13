@@ -9,13 +9,15 @@ services:
       - ./frontend:/app
     working_dir: /app
     # Umi Max 已在 config 中固定 host=0.0.0.0 / port=8000，这里无需再透传参数
+    # 先 install 再 dev；失败时不再重启，便于 docker logs 查看原因
+    # 不加载根目录 .env，避免其中变量被 npm 误读导致 "Invalid Version"（仅传入前端需要的）
     command: sh -c "npm install && npm run dev"
-    # 继承根目录 .env，让前端也能感知 APP_NAME 等配置（直接使用 APP_NAME）
-    env_file:
-      - .env
+    environment:
+      - APP_NAME=${APP_NAME:-黄桥车队账目管理系统}
     networks:
       - suanshu-net
-    restart: unless-stopped
+    # 开发环境不自动重启，避免崩溃后无限重启无法查看日志
+    restart: "no"
 
   web:
     volumes:
