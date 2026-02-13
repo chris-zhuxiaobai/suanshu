@@ -1,6 +1,6 @@
 import { App, Button, Col, Form, Input, InputNumber, Modal, Row, Select, Space } from 'antd';
 import { SaveOutlined } from '@ant-design/icons';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import dayjs from 'dayjs';
 import { createDailyIncome, updateDailyIncome, type CreateDailyIncomeParams, type UpdateDailyIncomeParams } from '@/services/dailyIncomes';
 import { getSchedulesByMonth } from '@/services/conductorSchedules';
@@ -10,22 +10,9 @@ interface IncomeEntryModalProps {
   open: boolean;
   vehicleId: string;
   date: string; // YYYY-MM-DD
-  income: API.DailyIncome | null; // 如果已有收入数据，传入用于编辑
+  income: API.DailyIncome | null; // 如果已有收入数据，传入用于编辑；null表示新增
   onCancel: () => void;
   onSuccess: () => void;
-}
-
-interface LocalIncomeData {
-  conductor_id: string;
-  turn1_amount: number | null;
-  turn2_amount: number | null;
-  turn3_amount: number | null;
-  turn4_amount: number | null;
-  turn5_amount: number | null;
-  wechat_amount: number;
-  fuel_subsidy: number;
-  reward_penalty: number;
-  remark?: string;
 }
 
 export default function IncomeEntryModal({
@@ -40,17 +27,6 @@ export default function IncomeEntryModal({
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [conductorOptions, setConductorOptions] = useState<Array<{ label: string; value: string }>>([]);
-  const [localData, setLocalData] = useState<LocalIncomeData>({
-    conductor_id: '',
-    turn1_amount: null,
-    turn2_amount: null,
-    turn3_amount: null,
-    turn4_amount: null,
-    turn5_amount: null,
-    wechat_amount: 0,
-    fuel_subsidy: 0,
-    reward_penalty: 0,
-  });
 
   // 加载售票员选项（排除本车）
   const loadConductorOptions = async () => {
@@ -83,65 +59,167 @@ export default function IncomeEntryModal({
     }
   };
 
-  // 初始化表单数据
+  const [defaultConductor, setDefaultConductor] = useState<string>('');
+  const [initialValuesReady, setInitialValuesReady] = useState(false);
+
+  // 金额等字段用本地 state 管理，与 Entry 页一致，确保正确显示
+  const [localAmounts, setLocalAmounts] = useState<{
+    turn1_amount: number | null;
+    turn2_amount: number | null;
+    turn3_amount: number | null;
+    turn4_amount: number | null;
+    turn5_amount: number | null;
+    wechat_amount: number;
+    fuel_subsidy: number;
+    reward_penalty: number;
+  }>({
+    turn1_amount: null,
+    turn2_amount: null,
+    turn3_amount: null,
+    turn4_amount: null,
+    turn5_amount: null,
+    wechat_amount: 0,
+    fuel_subsidy: 0,
+    reward_penalty: 0,
+  });
+
+  // 表单初始值：已录入使用income数据，未录入使用默认值
+  const formInitialValues = useMemo(() => {
+    if (income && initialValuesReady) {
+      // 编辑模式：使用已有数据，InputNumber 需要 undefined 而不是 null
+      const processAmount = (val: any): number | undefined => {
+        if (val === null || val === undefined || val === '') {
+          return undefined;
+        }
+        const num = Number(val);
+        return isNaN(num) ? undefined : num;
+      };
+      
+      // 处理必填字段，确保有默认值
+      const processRequiredAmount = (val: any): number => {
+        if (val === null || val === undefined || val === '') {
+          return 0;
+        }
+        const num = Number(val);
+        return isNaN(num) ? 0 : num;
+      };
+      
+      return {
+        conductor_id: income.conductor_id || '',
+        turn1_amount: processAmount(income.turn1_amount),
+        turn2_amount: processAmount(income.turn2_amount),
+        turn3_amount: processAmount(income.turn3_amount),
+        turn4_amount: processAmount(income.turn4_amount),
+        turn5_amount: processAmount(income.turn5_amount),
+        wechat_amount: processRequiredAmount(income.wechat_amount),
+        fuel_subsidy: processRequiredAmount(income.fuel_subsidy),
+        reward_penalty: processRequiredAmount(income.reward_penalty),
+        remark: income.remark || '',
+      };
+    }
+    // 新增模式：使用默认售票员
+    if (!income && defaultConductor !== undefined && initialValuesReady) {
+      return {
+        conductor_id: defaultConductor || '',
+        turn1_amount: undefined,
+        turn2_amount: undefined,
+        turn3_amount: undefined,
+        turn4_amount: undefined,
+        turn5_amount: undefined,
+        wechat_amount: 0,
+        fuel_subsidy: 0,
+        reward_penalty: 0,
+        remark: '',
+      };
+    }
+    return undefined;
+  }, [
+    income?.id,
+    income?.conductor_id,
+    income?.turn1_amount,
+    income?.turn2_amount,
+    income?.turn3_amount,
+    income?.turn4_amount,
+    income?.turn5_amount,
+    income?.wechat_amount,
+    income?.fuel_subsidy,
+    income?.reward_penalty,
+    income?.remark,
+    defaultConductor,
+    initialValuesReady,
+  ]);
+
+  // 同步 formInitialValues 到本地 state 和 form（conductor_id、remark 仍走 form）
   useEffect(() => {
-    if (!open) return;
+    if (!open || !formInitialValues) return;
+    setLocalAmounts({
+      turn1_amount: formInitialValues.turn1_amount ?? null,
+      turn2_amount: formInitialValues.turn2_amount ?? null,
+      turn3_amount: formInitialValues.turn3_amount ?? null,
+      turn4_amount: formInitialValues.turn4_amount ?? null,
+      turn5_amount: formInitialValues.turn5_amount ?? null,
+      wechat_amount: formInitialValues.wechat_amount ?? 0,
+      fuel_subsidy: formInitialValues.fuel_subsidy ?? 0,
+      reward_penalty: formInitialValues.reward_penalty ?? 0,
+    });
+    form.setFieldsValue({
+      conductor_id: formInitialValues.conductor_id,
+      remark: formInitialValues.remark,
+    });
+  }, [open, formInitialValues, form]);
+
+  const updateLocalAmount = (field: keyof typeof localAmounts, value: number | null) => {
+    setLocalAmounts((prev) => ({ ...prev, [field]: value }));
+  };
+
+  // 与 Entry 一致：0 或空显示为空
+  const toDisplayValue = (v: number | null | undefined) =>
+    v === 0 || v == null ? undefined : v;
+
+  // 初始化数据
+  useEffect(() => {
+    if (!open) {
+      form.resetFields();
+      setInitialValuesReady(false);
+      setDefaultConductor('');
+      setLocalAmounts({
+        turn1_amount: null,
+        turn2_amount: null,
+        turn3_amount: null,
+        turn4_amount: null,
+        turn5_amount: null,
+        wechat_amount: 0,
+        fuel_subsidy: 0,
+        reward_penalty: 0,
+      });
+      return;
+    }
 
     const initData = async () => {
       await loadConductorOptions();
       
-      if (income) {
-        // 编辑模式：使用已有数据
-        const data: LocalIncomeData = {
-          conductor_id: income.conductor_id,
-          turn1_amount: income.turn1_amount != null ? Number(income.turn1_amount) : null,
-          turn2_amount: income.turn2_amount != null ? Number(income.turn2_amount) : null,
-          turn3_amount: income.turn3_amount != null ? Number(income.turn3_amount) : null,
-          turn4_amount: income.turn4_amount != null ? Number(income.turn4_amount) : null,
-          turn5_amount: income.turn5_amount != null ? Number(income.turn5_amount) : null,
-          wechat_amount: Number(income.wechat_amount) || 0,
-          fuel_subsidy: Number(income.fuel_subsidy) || 0,
-          reward_penalty: Number(income.reward_penalty) || 0,
-          remark: income.remark,
-        };
-        setLocalData(data);
-        form.setFieldsValue(data);
+      if (!income) {
+        // 新增模式：加载默认售票员
+        const conductor = await loadDefaultConductor();
+        setDefaultConductor(conductor);
+        setInitialValuesReady(true);
       } else {
-        // 新增模式：使用默认售票员
-        const defaultConductor = await loadDefaultConductor();
-        const data: LocalIncomeData = {
-          conductor_id: defaultConductor,
-          turn1_amount: null,
-          turn2_amount: null,
-          turn3_amount: null,
-          turn4_amount: null,
-          turn5_amount: null,
-          wechat_amount: 0,
-          fuel_subsidy: 0,
-          reward_penalty: 0,
-        };
-        setLocalData(data);
-        form.setFieldsValue(data);
+        // 编辑模式：不需要加载默认售票员
+        setDefaultConductor('');
+        setInitialValuesReady(true);
       }
     };
 
     initData();
-  }, [open, income, vehicleId, date, form]);
+  }, [open, income?.id, vehicleId, date]);
 
-  // 截断金额到一位小数（不四舍五入）
-  const truncateAmount = (amount: number): number => {
-    if (isNaN(amount) || !isFinite(amount)) {
-      return 0;
-    }
-    return Math.floor(amount * 10) / 10;
-  };
 
   // 格式化金额显示
   const formatAmount = (amount: number): string => {
     if (isNaN(amount) || !isFinite(amount)) {
       return '0';
     }
-    const truncated = truncateAmount(amount);
+    const truncated = Math.floor(amount * 10) / 10;
     if (truncated % 1 === 0) {
       return truncated.toString();
     }
@@ -190,66 +268,10 @@ export default function IncomeEntryModal({
     return isNaN(numValue) ? 0 : numValue;
   };
 
-  // 计算营业额
-  const calculateRevenue = (data: LocalIncomeData): number => {
-    let total = 0;
-    for (let i = 1; i <= 5; i++) {
-      const amount = data[`turn${i}_amount` as keyof LocalIncomeData] as number | null;
-      if (amount !== null && amount !== undefined && !isNaN(amount)) {
-        total += Number(amount);
-      }
-    }
-    const wechatAmount = Number(data.wechat_amount) || 0;
-    if (!isNaN(wechatAmount)) {
-      total += wechatAmount;
-    }
-    return truncateAmount(total);
-  };
-
-  // 计算净收入
-  const calculateNetIncome = (data: LocalIncomeData): number => {
-    const revenue = calculateRevenue(data);
-    const fuelSubsidy = Number(data?.fuel_subsidy) || 0;
-    const rewardPenalty = Number(data?.reward_penalty) || 0;
-    const netIncome = revenue - fuelSubsidy + rewardPenalty;
-    const result = truncateAmount(netIncome);
-    return isNaN(result) ? 0 : result;
-  };
-
-  // 计算转数
-  const calculateTurnCount = (data: LocalIncomeData): number => {
-    let count = 0;
-    for (let i = 1; i <= 4; i++) {
-      const amount = data[`turn${i}_amount` as keyof LocalIncomeData] as number | null;
-      if (amount !== null && amount !== undefined && amount > 0) {
-        count++;
-      }
-    }
-    return count;
-  };
-
-  // 监听表单值变化，更新本地数据用于实时计算
-  const handleFormValuesChange = (changedValues: any, allValues: any) => {
-    const newData: LocalIncomeData = {
-      conductor_id: allValues.conductor_id || localData.conductor_id,
-      turn1_amount: allValues.turn1_amount ?? null,
-      turn2_amount: allValues.turn2_amount ?? null,
-      turn3_amount: allValues.turn3_amount ?? null,
-      turn4_amount: allValues.turn4_amount ?? null,
-      turn5_amount: allValues.turn5_amount ?? null,
-      wechat_amount: allValues.wechat_amount ?? 0,
-      fuel_subsidy: allValues.fuel_subsidy ?? 0,
-      reward_penalty: allValues.reward_penalty ?? 0,
-      remark: allValues.remark,
-    };
-    setLocalData(newData);
-  };
-
   // 保存数据
   const handleSave = async () => {
     try {
       const values = await form.validateFields();
-      
       if (!values.conductor_id) {
         messageApi.warning('请选择服务员');
         return;
@@ -259,14 +281,14 @@ export default function IncomeEntryModal({
 
       const incomeData: CreateDailyIncomeParams | UpdateDailyIncomeParams = {
         conductor_id: values.conductor_id,
-        turn1_amount: values.turn1_amount ?? null,
-        turn2_amount: values.turn2_amount ?? null,
-        turn3_amount: values.turn3_amount ?? null,
-        turn4_amount: values.turn4_amount ?? null,
-        turn5_amount: values.turn5_amount ?? null,
-        wechat_amount: values.wechat_amount ?? 0,
-        fuel_subsidy: values.fuel_subsidy ?? 0,
-        reward_penalty: values.reward_penalty ?? 0,
+        turn1_amount: localAmounts.turn1_amount,
+        turn2_amount: localAmounts.turn2_amount,
+        turn3_amount: localAmounts.turn3_amount,
+        turn4_amount: localAmounts.turn4_amount,
+        turn5_amount: localAmounts.turn5_amount,
+        wechat_amount: localAmounts.wechat_amount,
+        fuel_subsidy: localAmounts.fuel_subsidy,
+        reward_penalty: localAmounts.reward_penalty,
         remark: values.remark,
       };
 
@@ -299,9 +321,19 @@ export default function IncomeEntryModal({
     }
   };
 
-  const revenue = calculateRevenue(localData);
-  const netIncome = calculateNetIncome(localData);
-  const turnCount = calculateTurnCount(localData);
+  // 显示计算值：已录入使用income中的值，未录入不显示（后端会计算）
+  const displayStats = useMemo(() => {
+    if (income) {
+      // 编辑模式：使用后端返回的计算值
+      return {
+        revenue: Number(income.revenue) || 0,
+        netIncome: Number(income.net_income) || 0,
+        turnCount: Number(income.turn_count) || 0,
+      };
+    }
+    // 新增模式：不显示实时计算
+    return null;
+  }, [income]);
 
   return (
     <Modal
@@ -319,7 +351,14 @@ export default function IncomeEntryModal({
       ]}
       destroyOnHidden
     >
-      <Form form={form} layout="vertical" style={{ marginTop: 16 }} onValuesChange={handleFormValuesChange}>
+      {initialValuesReady && formInitialValues && (
+        <Form
+          form={form}
+          layout="vertical"
+          style={{ marginTop: 16 }}
+          key={`${income?.id || 'new'}-${vehicleId}-${date}-${open}`}
+          preserve={false}
+        >
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item
@@ -345,12 +384,7 @@ export default function IncomeEntryModal({
               <Row gutter={12}>
                 {[1, 2, 3, 4, 5].map((turn) => (
                   <Col key={turn}>
-                    <Form.Item
-                      label={`第${turn}转`}
-                      style={{ marginBottom: 0 }}
-                      name={`turn${turn}_amount`}
-                      getValueFromEvent={(value) => value ?? null}
-                    >
+                    <Form.Item label={`第${turn}转`} style={{ marginBottom: 0 }}>
                       <Space.Compact>
                         <InputNumber
                           placeholder="收入"
@@ -359,6 +393,8 @@ export default function IncomeEntryModal({
                           formatter={amountFormatter}
                           parser={amountParser}
                           style={{ width: 120 }}
+                          value={toDisplayValue(localAmounts[`turn${turn}_amount` as keyof typeof localAmounts])}
+                          onChange={(v) => updateLocalAmount(`turn${turn}_amount` as keyof typeof localAmounts, v ?? null)}
                         />
                         <span
                           style={{
@@ -385,12 +421,7 @@ export default function IncomeEntryModal({
 
         <Row gutter={12} style={{ display: 'flex', flexWrap: 'wrap' }}>
           <Col flex="none">
-            <Form.Item
-              label="微信收入"
-              name="wechat_amount"
-              getValueFromEvent={(value) => value ?? 0}
-              style={{ marginBottom: 0 }}
-            >
+            <Form.Item label="微信收入" style={{ marginBottom: 0 }}>
               <Space.Compact>
                 <InputNumber
                   placeholder="收入"
@@ -399,6 +430,8 @@ export default function IncomeEntryModal({
                   formatter={amountFormatter}
                   parser={amountParser}
                   style={{ width: 120 }}
+                  value={toDisplayValue(localAmounts.wechat_amount)}
+                  onChange={(v) => updateLocalAmount('wechat_amount', v ?? 0)}
                 />
                 <span
                   style={{
@@ -418,12 +451,7 @@ export default function IncomeEntryModal({
             </Form.Item>
           </Col>
           <Col flex="none">
-            <Form.Item
-              label="补油款"
-              name="fuel_subsidy"
-              getValueFromEvent={(value) => value ?? 0}
-              style={{ marginBottom: 0 }}
-            >
+            <Form.Item label="补油款" style={{ marginBottom: 0 }}>
               <Space.Compact>
                 <InputNumber
                   placeholder="金额"
@@ -432,6 +460,8 @@ export default function IncomeEntryModal({
                   formatter={amountFormatter}
                   parser={amountParser}
                   style={{ width: 120 }}
+                  value={toDisplayValue(localAmounts.fuel_subsidy)}
+                  onChange={(v) => updateLocalAmount('fuel_subsidy', v ?? 0)}
                 />
                 <span
                   style={{
@@ -451,12 +481,7 @@ export default function IncomeEntryModal({
             </Form.Item>
           </Col>
           <Col xs={24} sm={24} flex="none" style={{ width: '100%' }}>
-            <Form.Item
-              label="奖罚"
-              name="reward_penalty"
-              getValueFromEvent={(value) => value ?? 0}
-              style={{ marginBottom: 0 }}
-            >
+            <Form.Item label="奖罚" style={{ marginBottom: 0 }}>
               <Space.Compact>
                 <InputNumber
                   placeholder="金额（可为负）"
@@ -464,6 +489,8 @@ export default function IncomeEntryModal({
                   formatter={amountFormatter}
                   parser={rewardPenaltyParser}
                   style={{ width: 120 }}
+                  value={toDisplayValue(localAmounts.reward_penalty)}
+                  onChange={(v) => updateLocalAmount('reward_penalty', v ?? 0)}
                 />
                 <span
                   style={{
@@ -492,36 +519,42 @@ export default function IncomeEntryModal({
           </Col>
         </Row>
 
-        <Row gutter={16}>
-          <Col span={24}>
-            <Space size="large" style={{ marginTop: 8 }}>
-              {revenue !== 0 && (
-                <span>
-                  <strong>营业额：</strong>
-                  <span style={{ color: '#1677ff', fontSize: '16px', fontWeight: 'bold' }}>
-                    {formatAmount(revenue)}
+        {/* 仅编辑模式显示计算值 */}
+        {displayStats && (
+          <Row gutter={16}>
+            <Col span={24}>
+              <Space size="large" style={{ marginTop: 8 }}>
+                {displayStats.revenue !== 0 && (
+                  <span>
+                    <strong>营业额：</strong>
+                    <span style={{ color: '#1677ff', fontSize: '16px', fontWeight: 'bold' }}>
+                      {formatAmount(displayStats.revenue)}
+                    </span>
+                    <span style={{ marginLeft: '4px' }}>元</span>
                   </span>
-                  <span style={{ marginLeft: '4px' }}>元</span>
-                </span>
-              )}
-              {netIncome !== 0 && (
-                <span>
-                  <strong>实际分配金额：</strong>
-                  <span style={{ color: '#52c41a', fontSize: '16px', fontWeight: 'bold' }}>
-                    {formatAmount(netIncome)}
+                )}
+                {displayStats.netIncome !== 0 && (
+                  <span>
+                    <strong>实际分配金额：</strong>
+                    <span style={{ color: '#52c41a', fontSize: '16px', fontWeight: 'bold' }}>
+                      {formatAmount(displayStats.netIncome)}
+                    </span>
+                    <span style={{ marginLeft: '4px' }}>元</span>
                   </span>
-                  <span style={{ marginLeft: '4px' }}>元</span>
+                )}
+                <span>
+                  <strong>转数：</strong>
+                  <span style={{ color: '#722ed1', fontSize: '16px', fontWeight: 'bold' }}>
+                    {displayStats.turnCount}
+                  </span>
+                  <span style={{ marginLeft: '4px' }}>转</span>
                 </span>
-              )}
-              <span>
-                <strong>转数：</strong>
-                <span style={{ color: '#722ed1', fontSize: '16px', fontWeight: 'bold' }}>{turnCount}</span>
-                <span style={{ marginLeft: '4px' }}>转</span>
-              </span>
-            </Space>
-          </Col>
-        </Row>
-      </Form>
+              </Space>
+            </Col>
+          </Row>
+        )}
+        </Form>
+      )}
     </Modal>
   );
 }

@@ -17,44 +17,33 @@ interface VehicleIncomeItem {
 
 export default function WorkspacePage() {
   const { message: messageApi } = App.useApp();
-  const [loading, setLoading] = useState(false);
   const [vehicles, setVehicles] = useState<VehicleIncomeItem[]>([]);
-  const [selectedVehicle, setSelectedVehicle] = useState<VehicleIncomeItem | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [statisticsLoading, setStatisticsLoading] = useState(false);
   const [statisticsData, setStatisticsData] = useState<API.DailyStatisticsData | null>(null);
   const [historyPendingDates, setHistoryPendingDates] = useState<string[]>([]);
-  const [historyPendingLoading, setHistoryPendingLoading] = useState(false);
+  
+  // Modal相关状态
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string>('');
+  const [selectedIncome, setSelectedIncome] = useState<API.DailyIncome | null>(null);
+  
   const today = dayjs().format('YYYY-MM-DD');
-
-  // 金额格式化：整数不显示小数，小数保留1位
-  const formatAmount = (amount: number): string => {
-    if (isNaN(amount) || !isFinite(amount)) return '0';
-    const truncated = Math.floor(amount * 10) / 10;
-    return truncated % 1 === 0 ? truncated.toString() : truncated.toFixed(1);
-  };
 
   // 加载当天车辆数据
   const loadTodayVehicles = async () => {
-    setLoading(true);
     try {
       const result = await getIncomesByDate(today);
       setVehicles(result.vehicles);
     } catch (error: any) {
       if (error?.response?.status === 403) return;
       messageApi.error(error?.message || '加载车辆数据失败');
-    } finally {
-      setLoading(false);
     }
   };
 
   // 加载当天统计数据
   const loadStatisticsData = async () => {
-    setStatisticsLoading(true);
     try {
       const result = await getStatisticsByDate(today);
-      // 确保金额字段是数字类型
-      if (result && result.statistics) {
+      if (result?.statistics) {
         result.statistics.total_revenue = Number(result.statistics.total_revenue) || 0;
         result.statistics.total_net_income = Number(result.statistics.total_net_income) || 0;
         result.statistics.average_revenue = Number(result.statistics.average_revenue) || 0;
@@ -67,14 +56,11 @@ export default function WorkspacePage() {
       if (error?.response?.status === 403) return;
       messageApi.error(error?.message || '加载统计数据失败');
       setStatisticsData(null);
-    } finally {
-      setStatisticsLoading(false);
     }
   };
 
-  // 加载当月今日以前存在未录入信息的日期（历史待办）
+  // 加载历史待办日期
   const loadHistoryPendingDates = async () => {
-    setHistoryPendingLoading(true);
     try {
       const start = dayjs().startOf('month');
       const end = dayjs().subtract(1, 'day');
@@ -100,17 +86,15 @@ export default function WorkspacePage() {
         );
         if (hasPending) pending.push(datesToCheck[i]);
       });
-      // 日期倒序（最近的在前）
       pending.sort((a, b) => (a > b ? -1 : 1));
       setHistoryPendingDates(pending);
     } catch (e) {
       if ((e as any)?.response?.status === 403) return;
       setHistoryPendingDates([]);
-    } finally {
-      setHistoryPendingLoading(false);
     }
   };
 
+  // 初始化加载数据
   useEffect(() => {
     loadTodayVehicles();
     loadStatisticsData();
@@ -136,29 +120,35 @@ export default function WorkspacePage() {
     return { pending, entered, rest };
   }, [vehicles]);
 
-  // 点击Tag处理
-  const handleTagClick = (vehicle: VehicleIncomeItem) => {
-    // 休息状态的车辆不能点击
-    if (vehicle.is_rest) {
-      return;
-    }
-    setSelectedVehicle(vehicle);
+  // 点击待录入车辆：打开Modal进行新增
+  const handlePendingClick = (vehicle: VehicleIncomeItem) => {
+    setSelectedVehicleId(vehicle.vehicle_id);
+    setSelectedIncome(null); // 新增模式，income为null
     setModalOpen(true);
   };
 
-  // 弹窗关闭处理
-  const handleModalCancel = () => {
-    setModalOpen(false);
-    setSelectedVehicle(null);
+  // 点击已录入车辆：打开Modal进行编辑
+  const handleEnteredClick = (vehicle: VehicleIncomeItem) => {
+    setSelectedVehicleId(vehicle.vehicle_id);
+    setSelectedIncome(vehicle.income); // 编辑模式，传入已有数据
+    setModalOpen(true);
   };
 
-  // 保存成功后刷新数据
+  // Modal关闭处理
+  const handleModalCancel = () => {
+    setModalOpen(false);
+    setSelectedVehicleId('');
+    setSelectedIncome(null);
+  };
+
+  // Modal保存成功处理：刷新所有数据
   const handleModalSuccess = () => {
     loadTodayVehicles();
     loadStatisticsData();
     loadHistoryPendingDates();
   };
 
+  // 跳转到收入录入页面
   const goToIncomeEntry = (date: string) => {
     history.push(`/income/entry?date=${date}`);
   };
@@ -171,7 +161,7 @@ export default function WorkspacePage() {
           <DateInfoModule />
         </Col>
         <Col xs={24} lg={10}>
-          <Card title="当日统计" loading={statisticsLoading}>
+          <Card title="当日统计">
             {statisticsData?.statistics ? (
               <Space direction="vertical" size="large" style={{ width: '100%' }}>
                 <Row gutter={16}>
@@ -244,8 +234,7 @@ export default function WorkspacePage() {
         <Col xs={24} lg={14}>
           <Card>
             <Space direction="vertical" size="large" style={{ width: '100%' }}>
-
-              {/* 今日待办（原待录入） */}
+              {/* 今日待办：未录入的车辆 */}
               <div>
                 <Typography.Title level={5} style={{ marginBottom: 16 }}>
                   今日待办
@@ -267,7 +256,7 @@ export default function WorkspacePage() {
                           fontSize: '14px',
                           borderRadius: '4px',
                         }}
-                        onClick={() => handleTagClick(vehicle)}
+                        onClick={() => handlePendingClick(vehicle)}
                       >
                         {vehicle.vehicle_id}
                       </Tag>
@@ -278,7 +267,7 @@ export default function WorkspacePage() {
 
               <Divider />
 
-              {/* 已录入车辆 */}
+              {/* 已录入：已录入的车辆 */}
               <div>
                 <Typography.Title level={5} style={{ marginBottom: 16 }}>
                   已录入
@@ -300,7 +289,7 @@ export default function WorkspacePage() {
                           fontSize: '14px',
                           borderRadius: '4px',
                         }}
-                        onClick={() => handleTagClick(vehicle)}
+                        onClick={() => handleEnteredClick(vehicle)}
                       >
                         {vehicle.vehicle_id}
                       </Tag>
@@ -345,7 +334,7 @@ export default function WorkspacePage() {
 
         {/* 右侧：历史待办 */}
         <Col xs={24} lg={10}>
-          <Card title="历史待办" loading={historyPendingLoading}>
+          <Card title="历史待办">
             <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>
               当月今日以前存在未录入信息的日期
             </Typography.Text>
@@ -375,12 +364,12 @@ export default function WorkspacePage() {
       </Row>
 
       {/* 数据录入弹窗 */}
-      {selectedVehicle && (
+      {selectedVehicleId && (
         <IncomeEntryModal
           open={modalOpen}
-          vehicleId={selectedVehicle.vehicle_id}
+          vehicleId={selectedVehicleId}
           date={today}
-          income={selectedVehicle.income}
+          income={selectedIncome}
           onCancel={handleModalCancel}
           onSuccess={handleModalSuccess}
         />
